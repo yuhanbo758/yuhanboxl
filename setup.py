@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='yuhanbolh',
-    version='0.1.6',
+    name='yuhanboxl',
+    version='0.1.0',
     packages=find_packages(),
     description='效率工具，调用ai的api等',
     long_description=open('README.md', encoding='utf-8').read(),
