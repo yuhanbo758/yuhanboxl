@@ -2,19 +2,20 @@ from setuptools import setup, find_packages
 
 setup(
     name='yuhanbolh',
-    version='0.1.4',
+    version='0.1.5',
     packages=find_packages(),
     description='量化投资，数据获取和处理',
     long_description=open('README.md', encoding='utf-8').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/yuhanbo758/yuhanbolh',
     author='余汉波',
-    author_email='909410919@qq.com',
+    author_email='yuhanbo@sanrenjz.com',
     license='MIT',
     install_requires=[
         'requests',
         'numpy', 
         'pandas', 
+        'openai',
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',  # 根据您的开发状态选择：Alpha/Beta/Stable
@@ -28,6 +29,7 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
         'Operating System :: OS Independent',
     ],
     python_requires='>=3.6',  # 根据需要修改
