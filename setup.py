@@ -2,12 +2,12 @@ from setuptools import setup, find_packages
 
 setup(
     name='yuhanbolh',
-    version='0.1.5',
+    version='0.1.6',
     packages=find_packages(),
-    description='量化投资，数据获取和处理',
+    description='效率工具，调用ai的api等',
     long_description=open('README.md', encoding='utf-8').read(),
     long_description_content_type='text/markdown',
-    url='https://github.com/yuhanbo758/yuhanbolh',
+    url='https://github.com/yuhanbo758/yuhanboxl',
     author='余汉波',
     author_email='yuhanbo@sanrenjz.com',
     license='MIT',
