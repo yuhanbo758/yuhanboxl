@@ -3,35 +3,7 @@ import sqlite3
 import os
 import re
 from datetime import datetime, timedelta
-
-# 读取mm.db，查询账号密码
-def check_account(column_name, project_name):
-    db_path = r"D:\wenjian\python\data\data\mm.db"
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-
-        query = f"""
-        SELECT {column_name}
-        FROM connect_account_password
-        WHERE project_name = ?
-        """
-
-        cursor.execute(query, (project_name,))
-        result = cursor.fetchone()
-
-        cursor.close()
-        conn.close()
-
-        if result:
-            return result[0]  # 返回查询结果而不是列表
-        else:
-            return None
-
-    except Exception as e:
-        print(f"数据库操作错误：{e}")
-        return None
-
+import global_functions as gf
 
 # 更新 notion 页面
 def process_notion_ids(folder_path, db_path):
@@ -80,7 +52,7 @@ def process_notion_ids(folder_path, db_path):
 
 # 更新 notion 页面，封面和摘要
 def update_notion_page(page_id):
-    NOTION_TOKEN = check_account("password", "notion_token")
+    NOTION_TOKEN = gf.check_account("password", "notion_token")
     NOTION_API_URL = f"https://api.notion.com/v1/pages/{page_id}"
 
     headers = {
