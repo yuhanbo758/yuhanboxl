@@ -3,7 +3,6 @@ import pandas as pd
 
 # 从 office_functions.py 导入函数
 from .office_functions import (
-    check_account,
     process_notion_ids,
     update_notion_page,
     update_notion_pages
