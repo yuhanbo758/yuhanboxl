@@ -1,4 +1,3 @@
-
 import dashscope
 from http import HTTPStatus
 from pathlib import Path
@@ -6,7 +5,7 @@ import requests
 import json
 from openai import OpenAI
 import google.generativeai as genai
-from global_functions import check_account
+from .global_functions import check_account
 import re
 
 
