@@ -3,7 +3,6 @@ import sqlite3
 import os
 import re
 from datetime import datetime, timedelta
-import global_functions as gf
 import sys
 from qcloud_cos import CosConfig
 from qcloud_cos import CosS3Client
@@ -15,7 +14,7 @@ from bs4 import BeautifulSoup as bs
 import base64
 from datetime import datetime, timedelta
 import requests
-from global_functions import check_account
+import global_functions as gf
 
 # 更新 notion 页面，参数分别为获取notion id文件夹路径和存储id数据库路径
 def process_notion_ids(folder_path, db_path):
@@ -64,7 +63,7 @@ def process_notion_ids(folder_path, db_path):
 
 # 更新 notion 页面，封面和摘要，参数为notion id
 def update_notion_page(page_id):
-    NOTION_TOKEN = check_account("password", "notion_token")
+    NOTION_TOKEN = gf.check_account("password", "notion_token")
     NOTION_API_URL = f"https://api.notion.com/v1/pages/{page_id}"
 
     headers = {
@@ -153,7 +152,7 @@ def upload_image_to_github(repo, image_path, commit_message="Upload image"):
     """
     try:
         # 获取 GitHub 令牌，确保你的令牌是正确的
-        token = check_account("password", "github_token")
+        token = gf.check_account("password", "github_token")
 
         # 读取图像并将其编码为 base64 格式
         with open(image_path, "rb") as image_file:
@@ -228,7 +227,7 @@ def upload_bing_image_to_github(repo, image_url, commit_message="Upload image"):
     """
     try:
         # 获取 GitHub 令牌，确保你的令牌是正确的
-        token = check_account("password", "github_token")
+        token = gf.check_account("password", "github_token")
 
         # 从 URL 读取图片数据
         response = requests.get(image_url)
@@ -298,7 +297,7 @@ def upload_bing_image_to_github(repo, image_url, commit_message="Upload image"):
 # 上传文件到 Lsky Pro 并返回 Markdown 链接，策略ID为2时，返回的链接为minlo图床的链接，参数为文件路径和上传url
 def upload_to_lsky_pro(file_path, upload_url = "http://192.168.31.143:7791/api/v1/upload"):
     # 上传信息
-    token = check_account("password", upload_url)
+    token = gf.check_account("password", upload_url)
     policy_id = 2  # minlo图床
 
     # 读取文件
@@ -522,8 +521,8 @@ def upload_to_cos(bucket, file_name, region='ap-guangzhou', cos_folder='temporar
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
     # 从环境变量中获取secret_id和secret_key
-    secret_id = check_account("username", "TENCENT_CLOUD_COS")  # 确保已经设置了环境变量COS_SECRET_ID
-    secret_key = check_account("password", "TENCENT_CLOUD_COS")  # 确保已经设置了环境变量COS_SECRET_KEY
+    secret_id = gf.check_account("username", "TENCENT_CLOUD_COS")  # 确保已经设置了环境变量COS_SECRET_ID
+    secret_key = gf.check_account("password", "TENCENT_CLOUD_COS")  # 确保已经设置了环境变量COS_SECRET_KEY
     token = None  # 使用临时密钥需要传入Token，默认为空,可不填
     scheme = 'https'  # 指定使用 http/https 协议来访问COS，默认为https, 可不填
 
@@ -588,4 +587,6 @@ def upload_bing_image_to_cos(bucket, image_url, region='ap-shanghai', cos_folder
 
 if __name__ == "__main__":
     # 更新notion的封面和摘要，参数为获取notion id文件夹路径和存储id数据库路径
-    update_notion_pages(r"D:\wenjian\obsidian\笔记\自媒体\AI文章", r"D:\wenjian\python\smart\data\article.db")
+    # update_notion_pages(r"D:\wenjian\obsidian\笔记\自媒体\AI文章", r"D:\wenjian\python\smart\data\article.db")
+
+    print(gf.check_account("username", "TENCENT_CLOUD_COS"))

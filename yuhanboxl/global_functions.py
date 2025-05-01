@@ -1,6 +1,7 @@
 import sqlite3  # 导入sqlite3模块
 import pandas as pd  # 导入pandas模块
 import os
+import glob
 
 
 
@@ -121,7 +122,7 @@ def get_table(database_path, table_name):
         conn.close()
 
 
-# 将文本保存为.md文件
+# 将文本保存为.md文件，参数为生成的文本和文件路径
 def save_as_md(generated_text, file_path):
     """
     将生成的文本保存为.md文件。
@@ -133,6 +134,35 @@ def save_as_md(generated_text, file_path):
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(generated_text)
 
+# 读取目录下所有文本文件并将内容格式化为适合AI阅读的格式
+def read_and_format_text_files(directory_path):
+    """
+    读取目录下所有文本文件并将内容格式化为适合AI阅读的格式
+    """
+    # 定义常见的文本文件扩展名
+    text_extensions = ["*.py", "*.txt", "*.md", "*.json", "*.csv", "*.html", "*.css", "*.js", "*.xml", "*.yaml", "*.yml", "*.ini", "*.cfg", "*.conf"]
+    
+    # 格式化后的文本
+    formatted_text = ""
+    
+    # 遍历每种扩展名查找文件
+    for extension in text_extensions:
+        file_paths = glob.glob(os.path.join(directory_path, "**", extension), recursive=True)
+        
+        # 读取每个文件的内容并格式化
+        for file_path in file_paths:
+            formatted_text += f"\n{'='*50}\n"
+            formatted_text += f"文件: {file_path}\n"
+            formatted_text += f"{'='*50}\n"
+            
+            try:
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    content = file.read()
+                    formatted_text += content + "\n"
+            except Exception as e:
+                formatted_text += f"读取文件时出错: {e}\n"
+    
+    return formatted_text
 
 if __name__ == "__main__":
     get_table(r"D:\data\database\article.db", "RSS订阅")

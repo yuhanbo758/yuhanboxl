@@ -7,10 +7,13 @@ import json
 from openai import OpenAI
 import google.generativeai as genai
 from global_functions import check_account
+import re
+
+
 
 
 # 用gemini生成文章内容，参数分别为查询内容，主要模型名，备用模型名
-def generate_text(query, primary_model='models/gemini-2.5-pro-preview-03-25', fallback_model='models/gemini-2.0-flash-exp'):
+def generate_text(query, primary_model='models/gemini-2.5-pro-preview-03-25', fallback_model='models/gemini-2.0-flash'):
     # 在脚本中设置代理环境变量，看自己的网络是不能联外网，若使用clash的话，设置如下
     # os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
     # os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
@@ -196,6 +199,352 @@ def call_with_messages(prompt, model=dashscope.Generation.Models.qwen_max):
         print(f"生成故事时发生错误: {e}")
         return None
 
+
+# 调用阿里云千问3模型的自定义函数，参数分别是：提示词，模型，温度，最大token
+def call_qianwen3(prompt, model="qwen-max", temperature=0.7, max_tokens=10000):
+    """
+    调用阿里云千问3模型的自定义函数
+    
+    参数:
+        prompt (str): 输入提示词
+        model (str): 模型名称，可选值包括"qwen-max"、"qwen-plus"、"qwen-turbo"等
+        temperature (float): 温度参数，控制输出的随机性，范围0-1
+        max_tokens (int): 最大生成token数量
+        
+    返回:
+        dict: 模型返回的完整响应
+        str: 如果发生错误，返回错误信息
+    """
+    # 替换为您的API密钥
+    api_key = check_account("password", "DASHSCOPE_API_KEY") 
+    
+    # API端点
+    url = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation"
+    
+    # 请求头
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    # 请求体
+    data = {
+        "model": model,
+        "input": {
+            "prompt": prompt
+        },
+        "parameters": {
+            "temperature": temperature,
+            "max_tokens": max_tokens
+        }
+    }
+    
+    try:
+        # 发送请求
+        response = requests.post(url, headers=headers, json=data)
+        
+        # 检查响应状态
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return f"错误: {response.status_code}, {response.text}"
+    
+    except Exception as e:
+        return f"请求过程中发生错误: {str(e)}"
+    
+
+# 用ollama生成内容-向本地运行的 Ollama 服务发送请求。参数分别是：用户提问内容、模型名称、系统提示词、是否使用流式响应、是否过滤掉思考部分。
+def query_ollama(prompt, model="qwen3:4b", system="", stream=False, filter_think=True):
+    """
+    向本地运行的 Ollama 服务发送请求
+    
+    参数:
+        prompt: 用户提问内容
+        model: 要使用的模型名称，默认为"qwen3:4b"
+        system: 系统提示词
+        stream: 是否使用流式响应
+        filter_think: 是否过滤掉思考部分，默认为True
+    
+    返回:
+        模型响应的文本内容，根据filter_think参数决定是否过滤掉思考(think)部分
+    """
+    
+    url = "http://localhost:11434/api/chat"
+    
+    payload = {
+        "model": model,
+        "messages": [
+            {
+                "role": "system",
+                "content": system
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "stream": stream
+    }
+    
+    try:
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            result = response.json()
+            content = result["message"]["content"]
+            
+            if filter_think:
+                # 过滤掉<think>...</think>或【思考】.*?【/思考】|\[think\].*?\[/think\]|<思考>.*?</思考>或其他类似标记的思考部分
+                filtered_content = re.sub(r'<think>.*?</think>|【思考】.*?【/思考】|\[think\].*?\[/think\]|<思考>.*?</思考>', '', content, flags=re.DOTALL)
+                # 去除可能留下的多余空行
+                filtered_content = re.sub(r'\n\s*\n', '\n\n', filtered_content).strip()
+                return filtered_content
+            else:
+                return content
+        else:
+            return f"错误: {response.status_code}, {response.text}"
+    except Exception as e:
+        return f"请求发生异常: {str(e)}"
+
+
+
+# 调用OpenRouter API生成内容，参数分别：提示词、模型名称
+def call_openrouter(prompt, model="deepseek/deepseek-r1:free"):
+    """
+    使用OpenRouter API调用不同的AI模型
+    
+    参数:
+        prompt (str): 发送给模型的提示文本
+        model (str): 要使用的模型名称，例如 "deepseek/deepseek-r1:free", "anthropic/claude-3-opus-20240229"
+        
+    返回:
+        str: 模型生成的回复内容
+    """
+    api_key = check_account("password", "OPENROUTER_API_KEY")
+    if not api_key:
+        raise ValueError("OpenRouter API密钥必须在环境变量OPENROUTER_API_KEY中设置")
+    
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}",
+        "HTTP-Referer": "https://your-site.com",  # 替换为您的网站
+        "X-Title": "My Application"  # 替换为您的应用名称
+    }
+    
+    data = {
+        "model": model,
+        "messages": [
+            {"role": "user", "content": prompt}
+        ]
+    }
+    
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers=headers,
+        data=json.dumps(data)
+    )
+    
+    result = response.json()
+    
+    # 提取内容部分
+    if "choices" in result and len(result["choices"]) > 0:
+        return result["choices"][0]["message"]["content"]
+    else:
+        return f"获取回复失败: {result}"
+# 调用DeepSeek API生成内容，参数分别：提示词、模型名称、系统提示
+def call_deepseek(prompt, model = "deepseek-chat", system_prompt = "You are a helpful assistant."):
+
+    """
+    调用DeepSeek API生成内容
+    
+    参数:
+        prompt (str): 发送给模型的提示文本
+        model (str): 模型名称，默认为'deepseek-chat'（DeepSeek-V3模型），另一模型为'deepseek-reasoner'（DeepSeek-R1推理模型）
+        system_prompt (str): 系统提示，定义模型角色和行为
+        
+    返回:
+        str: 模型生成的回复内容
+    """
+    api_key = check_account("password", "DEEPSEEK_API_KEY")
+    if not api_key:
+        raise ValueError("DeepSeek API密钥必须在环境变量DEEPSEEK_API_KEY中设置")
+    
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": prompt}
+    ]
+    
+    data = {
+        "model": model,
+        "messages": messages,
+        "stream": False
+    }
+    
+    response = requests.post(
+        "https://api.deepseek.com/v1/chat/completions",
+        headers=headers,
+        data=json.dumps(data)
+    )
+    
+    if response.status_code == 200:
+        result = response.json()
+        # 提取内容部分
+        if "choices" in result and len(result["choices"]) > 0:
+            return result["choices"][0]["message"]["content"]
+        else:
+            return f"获取回复失败: {result}"
+    else:
+        raise Exception(f"API请求失败: {response.status_code}, {response.text}")
+
+
+# 统一AI响应生成函数，支持多种AI模型。参数分别：提示词、模型类型、具体使用的模型名称
+def generate_ai_response(prompt, model_type="gemini", model=None):
+    """
+    统一的AI响应生成函数，支持多种AI模型
+    
+    参数:
+        prompt (str): 发送给模型的提示文本
+        model_type (str): 模型类型，支持 "gemini", "openrouter", "deepseek"
+        model (str): 具体使用的模型名称，不同类型有不同的默认值。主要包括：
+            gemini: 'models/gemini-2.5-pro-preview-03-25'
+            openrouter: 'deepseek/deepseek-r1:free'
+            deepseek: 'deepseek-chat'
+    
+    返回:
+        str: 模型生成的回复内容
+    """
+    if model_type.lower() == "gemini":
+        # Gemini模型默认值
+        primary_model = 'models/gemini-2.5-pro-preview-03-25'
+        fallback_model = 'models/gemini-2.0-flash-exp'
+        
+        # 如果指定了特定模型，则使用指定的模型
+        if model:
+            primary_model = model
+        
+        GOOGLE_API_KEY = check_account("password", "GOOGLE_API_KEY")
+
+        # 确保API密钥已正确设置
+        if GOOGLE_API_KEY is None:
+            raise ValueError("GOOGLE_API_KEY 未设置，请在数据库'D:\\data\\database\\mm.db'中增加")
+
+        # 使用API密钥配置SDK
+        genai.configure(api_key=GOOGLE_API_KEY)
+
+        # 首先尝试使用主要模型
+        try:
+            model_instance = genai.GenerativeModel(primary_model)
+            response = model_instance.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            if fallback_model != primary_model:
+                try:
+                    # 如果第一个模型失败，尝试使用备用模型
+                    model_instance = genai.GenerativeModel(fallback_model)
+                    response = model_instance.generate_content(prompt)
+                    return response.text
+                except Exception as e2:
+                    # 如果两个模型都失败，返回错误信息
+                    return f"生成内容时发生错误: {e2}"
+            else:
+                return f"生成内容时发生错误: {e}"
+    
+    elif model_type.lower() == "openrouter":
+        # OpenRouter模型默认值
+        default_model = "deepseek/deepseek-r1:free"
+        
+        # 如果指定了特定模型，则使用指定的模型
+        if model:
+            openrouter_model = model
+        else:
+            openrouter_model = default_model
+        
+        api_key = check_account("password", "OPENROUTER_API_KEY")
+        if not api_key:
+            raise ValueError("OpenRouter API密钥未设置，请在数据库中增加OPENROUTER_API_KEY")
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": "https://your-site.com",  # 替换为您的网站
+            "X-Title": "My Application"  # 替换为您的应用名称
+        }
+        
+        data = {
+            "model": openrouter_model,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
+        }
+        
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            data=json.dumps(data)
+        )
+        
+        result = response.json()
+        
+        # 提取内容部分
+        if "choices" in result and len(result["choices"]) > 0:
+            return result["choices"][0]["message"]["content"]
+        else:
+            return f"获取回复失败: {result}"
+    
+    elif model_type.lower() == "deepseek":
+        # DeepSeek模型默认值
+        default_model = "deepseek-chat"
+        # 固定的系统提示
+        system_prompt = "You are a helpful assistant."
+        
+        # 如果指定了特定模型，则使用指定的模型
+        if model:
+            deepseek_model = model
+        else:
+            deepseek_model = default_model
+        
+        api_key = check_account("password", "DEEPSEEK_API_KEY")
+        if not api_key:
+            raise ValueError("DeepSeek API密钥未设置，请在数据库中增加DEEPSEEK_API_KEY")
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+        
+        data = {
+            "model": deepseek_model,
+            "messages": messages,
+            "stream": False
+        }
+        
+        response = requests.post(
+            "https://api.deepseek.com/v1/chat/completions",
+            headers=headers,
+            data=json.dumps(data)
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            # 提取内容部分
+            if "choices" in result and len(result["choices"]) > 0:
+                return result["choices"][0]["message"]["content"]
+            else:
+                return f"获取回复失败: {result}"
+        else:
+            raise Exception(f"API请求失败: {response.status_code}, {response.text}")
+    
+    else:
+        return f"不支持的模型类型: {model_type}，请使用 'gemini'、'openrouter' 或 'deepseek'"
 # 阿里万相SD，500张，支持中文，用完需再申请https://help.aliyun.com/zh/dashscope/developer-reference/getting-started-with-stable-diffusion-models?spm=5176.28197632.0.0.97d87e06OPIVDX&disableWebsiteRedirect=true
 def generate_and_save_images(prompt, n=1, size='1024*1024', save_path=r'D:\wenjian\python\smart\data\image', base_file_name='文章图片'):
     dashscope.api_key = check_account("password", "DASHSCOPE_API_KEY") 

@@ -21,7 +21,8 @@ from .global_functions import (
     create_account_database,
     add_account,
     get_table,
-    save_as_md
+    save_as_md,
+    read_and_format_text_files
 )
 
 # 从 ai.py 导入函数
@@ -31,8 +32,19 @@ from .ai import (
     generate_gpt,
     get_content_with_token,
     kimi_chat,
+    generate_and_save_images,
+    query_ollama,
+    generate_ai_response,
     call_with_messages,
-    generate_and_save_images
+    call_deepseek,
+    call_openrouter,
+    call_qianwen3,
+    call_deepseek
+)
+
+# 从 file_manage.py 导入函数
+from .file_manage import (
+    read_md_file
 )
 
 # 定义 __all__ 变量来明确指定哪些函数应该被导出
@@ -56,6 +68,7 @@ __all__ = [
     'add_account',
     'get_table',
     'save_as_md',
+    'read_and_format_text_files',
     
     # ai.py
     'generate_text',
@@ -63,7 +76,17 @@ __all__ = [
     'generate_gpt',
     'get_content_with_token',
     'kimi_chat',
+    'generate_and_save_images',
+    'query_ollama',
+    'generate_ai_response',
     'call_with_messages',
-    'generate_and_save_images'
+    'call_deepseek',
+    'call_openrouter',
+    'call_qianwen3',
+    'call_deepseek',
+    
+
+    # file_manage.py
+    'read_md_file'
 ]
 
