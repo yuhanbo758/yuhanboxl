@@ -4,9 +4,11 @@ from pathlib import Path
 import requests
 import json
 from openai import OpenAI
+from dashscope import ImageSynthesis
 import google.generativeai as genai
 from .global_functions import check_account
 import re
+import os
 
 
 
@@ -251,7 +253,57 @@ def call_qianwen3(prompt, model="qwen-max", temperature=0.7, max_tokens=10000):
     except Exception as e:
         return f"请求过程中发生错误: {str(e)}"
     
-
+# 硅基流动API调用生成内容，参数：prompt（发送给模型的提示词），model（使用的模型名称，默认为"Qwen/QwQ-32B"）
+def siliconflow_chat(prompt, model="Qwen/QwQ-32B"):
+    """
+    调用硅基流动API生成回复，只返回内容部分
+    
+    参数:
+    prompt (str): 发送给模型的提示词
+    model (str): 使用的模型名称，默认为"Qwen/QwQ-32B"
+    
+    返回:
+    str: 模型生成的回复内容
+    """
+    url = "https://api.siliconflow.cn/v1/chat/completions"
+    api_key = check_account("password", "siliconflow_API_KEY")
+    
+    # 只保留必要的参数
+    payload = {
+        "model": model,
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    }
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.request("POST", url, json=payload, headers=headers)
+        # 确保请求成功
+        response.raise_for_status()
+        
+        response_json = response.json()
+        
+        # 调试信息
+        if "choices" not in response_json:
+            print(f"API响应缺少choices字段，原始响应: {response_json}")
+            return f"API调用失败: {response_json.get('error', {}).get('message', '未知错误')}"
+        
+        # 只返回content部分
+        return response_json["choices"][0]["message"]["content"].strip()
+    except requests.exceptions.RequestException as e:
+        return f"请求错误: {str(e)}"
+    except KeyError as e:
+        return f"响应格式错误: {str(e)}, 响应内容: {response_json}"
+    except Exception as e:
+        return f"未知错误: {str(e)}"
 # 用ollama生成内容-向本地运行的 Ollama 服务发送请求。参数分别是：用户提问内容、模型名称、系统提示词、是否使用流式响应、是否过滤掉思考部分。
 def query_ollama(prompt, model="qwen3:4b", system="", stream=False, filter_think=True):
     """
@@ -545,7 +597,7 @@ def generate_ai_response(prompt, model_type="gemini", model=None):
     else:
         return f"不支持的模型类型: {model_type}，请使用 'gemini'、'openrouter' 或 'deepseek'"
 # 阿里万相SD，500张，支持中文，用完需再申请https://help.aliyun.com/zh/dashscope/developer-reference/getting-started-with-stable-diffusion-models?spm=5176.28197632.0.0.97d87e06OPIVDX&disableWebsiteRedirect=true
-def generate_and_save_images(prompt, n=1, size='1024*1024', save_path=r'D:\wenjian\python\smart\data\image', base_file_name='文章图片'):
+def generate_and_save_images(prompt, n=1, size='1024*1024', save_path=r'D:\data\image', base_file_name='文章图片'):
     dashscope.api_key = check_account("password", "DASHSCOPE_API_KEY") 
     rsp = dashscope.ImageSynthesis.call(model=dashscope.ImageSynthesis.Models.wanx_v1,
                                         prompt=prompt,
@@ -570,6 +622,139 @@ def generate_and_save_images(prompt, n=1, size='1024*1024', save_path=r'D:\wenji
         print('Failed, status_code: %s, code: %s, message: %s' %
               (rsp.status_code, rsp.code, rsp.message))
 
+# 使用阿里万相模型生成图片url
+def generate_ali_image_url(prompt):
+    """
+    使用阿里万相模型生成图片并返回URL
+    
+    参数:
+        prompt: 图片生成提示词
+    
+    返回:
+        成功时返回图片URL，失败时返回None
+    """
+    try:
+        rsp = ImageSynthesis.call(api_key = check_account("password", "DASHSCOPE_API_KEY"),
+                                model="wanx2.1-t2i-plus",
+                                prompt=prompt,
+                                n=1,
+                                size='1024*1024')
+        
+        if rsp.status_code == HTTPStatus.OK:
+            # 只返回URL，不下载图片
+            return rsp.output.results[0].url
+        else:
+            print('生成图片失败, 状态码: %s, 错误码: %s, 错误信息: %s' %
+                (rsp.status_code, rsp.code, rsp.message))
+            return None
+    except Exception as e:
+        print(f"生成图片时发生错误: {e}")
+        return None
+
+
+# 使用minimax生成图片url
+def generate_minimax_image_url(prompt, aspect_ratio="1:1", num_images=1, response_format="url", prompt_optimizer=True):
+    """
+    调用MiniMax API生成图片
+    
+    参数:
+        prompt (str): 图片生成提示词
+        aspect_ratio (str): 图片宽高比，默认"16:9"
+        num_images (int): 生成图片数量，默认1
+        response_format (str): 返回格式，默认"url"
+        prompt_optimizer (bool): 是否使用提示词优化，默认True
+        
+    返回:
+        str或list: 生成的图片URL (如果num_images=1)或URL列表(如果num_images>1)
+    """
+    url = "https://api.minimax.chat/v1/image_generation"
+    api_key = check_account("password", "MINIMAX_API_KEY")
+    
+    payload = json.dumps({
+        "model": "image-01", 
+        "prompt": prompt,
+        "aspect_ratio": aspect_ratio,
+        "response_format": response_format,
+        "n": num_images,
+        "prompt_optimizer": prompt_optimizer
+    })
+    
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
+    
+    response = requests.request("POST", url, headers=headers, data=payload)
+    result = response.json()
+    
+    # 从返回结果中提取图片URL
+    if result.get('base_resp', {}).get('status_code') == 0:
+        image_urls = result.get('data', {}).get('image_urls', [])
+        # 当只有一张图片时，直接返回链接字符串而不是列表
+        if num_images == 1 and image_urls:
+            return image_urls[0]
+        return image_urls
+    return "" if num_images == 1 else []
+
+
+# 使用minimax生成图片并保存到本地，参数分别是：图片生成的提示词、图片保存路径、自定义文件名
+def generate_minimax_image_download(prompt, save_path=r"D:\data\image", custom_filename=None):
+    """
+    使用MiniMax API生成图片并保存
+    
+    参数:
+    prompt (str): 图片生成的提示词
+    save_path (str): 图片保存路径
+    custom_filename (str, optional): 自定义文件名，如不指定则使用API返回的id命名
+    
+    返回:
+    str: 保存的图片完整路径，失败则返回错误信息
+    """
+    url = "https://api.minimax.chat/v1/image_generation"
+    api_key = check_account("password", "MINIMAX_API_KEY")
+
+    payload = json.dumps({
+        "model": "image-01", 
+        "prompt": prompt,
+        "aspect_ratio": "1:1",
+        "response_format": "url",
+        "n": 1,
+        "prompt_optimizer": True
+    })
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    response_data = response.json()
+    
+    # 创建下载目录（如果不存在）
+    os.makedirs(save_path, exist_ok=True)
+
+    # 下载生成的图片
+    if 'data' in response_data and 'image_urls' in response_data['data']:
+        image_url = response_data['data']['image_urls'][0]
+        img_response = requests.get(image_url)
+        
+        if img_response.status_code == 200:
+            # 使用自定义文件名或API返回的id命名
+            if custom_filename:
+                filename = custom_filename
+            else:
+                filename = f"minimax_image_{response_data['id']}.png"
+            
+            filepath = os.path.join(save_path, filename)
+            
+            # 保存图片
+            with open(filepath, 'wb') as f:
+                f.write(img_response.content)
+            
+            return filepath
+        else:
+            return f"下载图片失败，状态码: {img_response.status_code}"
+    else:
+        return "API响应中未找到图片URL"
 
 if __name__ == "__main__":
     print(generate_text("你好"))

@@ -134,7 +134,33 @@ def save_as_md(generated_text, file_path):
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(generated_text)
 
-# 读取目录下所有文本文件并将内容格式化为适合AI阅读的格式
+
+# 读取指定文本文件并将内容格式化为适合AI阅读的格式，参数是文件路径
+def read_and_format_text_file(file_path):
+    """
+    读取指定文本文件并将内容格式化为适合AI阅读的格式
+    """
+    # 格式化后的文本
+    formatted_text = ""
+    
+    # 检查文件是否存在
+    if not os.path.isfile(file_path):
+        return f"错误：文件 {file_path} 不存在"
+    
+    # 格式化文件内容
+    formatted_text += f"\n{'='*50}\n"
+    formatted_text += f"文件: {file_path}\n"
+    formatted_text += f"{'='*50}\n"
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+            formatted_text += content + "\n"
+    except Exception as e:
+        formatted_text += f"读取文件时出错: {e}\n"
+    
+    return formatted_text
+# 读取目录下所有文本文件并将内容格式化为适合AI阅读的格式，参数是文件夹路径
 def read_and_format_text_files(directory_path):
     """
     读取目录下所有文本文件并将内容格式化为适合AI阅读的格式

@@ -22,6 +22,7 @@ from .global_functions import (
     add_account,
     get_table,
     save_as_md,
+    read_and_format_text_file,
     read_and_format_text_files
 )
 
@@ -33,6 +34,10 @@ from .ai import (
     get_content_with_token,
     kimi_chat,
     generate_and_save_images,
+    generate_ali_image_url,
+    generate_minimax_image_url,
+    generate_minimax_image_download,
+    siliconflow_chat,
     query_ollama,
     generate_ai_response,
     call_with_messages,
@@ -68,6 +73,7 @@ __all__ = [
     'add_account',
     'get_table',
     'save_as_md',
+    'read_and_format_text_file',
     'read_and_format_text_files',
     
     # ai.py
@@ -77,6 +83,10 @@ __all__ = [
     'get_content_with_token',
     'kimi_chat',
     'generate_and_save_images',
+    'generate_ali_image_url',
+    'generate_minimax_image_url',
+    'generate_minimax_image_download',
+    'siliconflow_chat',
     'query_ollama',
     'generate_ai_response',
     'call_with_messages',
