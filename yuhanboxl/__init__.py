@@ -28,6 +28,8 @@ from .global_functions import (
 
 # 从 ai.py 导入函数
 from .ai import (
+    gemini_generate_text,
+    gemini_generate_image,
     generate_text,
     ask_gemini,
     generate_gpt,
@@ -77,6 +79,8 @@ __all__ = [
     'read_and_format_text_files',
     
     # ai.py
+    'gemini_generate_text',
+    'gemini_generate_image',
     'generate_text',
     'ask_gemini',
     'generate_gpt',

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='yuhanboxl',
-    version='0.3.4',
+    version='0.3.5',
     packages=find_packages(),
     description='效率工具，调用ai的api等',
     long_description=open('README.md', encoding='utf-8').read(),

@@ -9,8 +9,141 @@ import google.generativeai as genai
 from .global_functions import check_account
 import re
 import os
+from PIL import Image
+from io import BytesIO
+import base64
+import time
 
+# 使用Gemini生成文本，参数分别为：提示文本，主要模型，备用模型。
+# 默认主要模型：gemini-2.5-pro-preview-03-25；默认备用模型：gemini-2.0-flash
+def gemini_generate_text(query, primary_model='gemini-2.5-pro-preview-03-25', fallback_model='gemini-2.0-flash'):
+    # 在脚本中设置代理环境变量，看自己的网络是不能联外网，若使用clash的话，设置如下
+    # os.environ['HTTP_PROXY'] = 'http://127.0.0.1:7890'
+    # os.environ['HTTPS_PROXY'] = 'http://127.0.0.1:7890'
 
+    GOOGLE_API_KEY = check_account("password", "GOOGLE_API_KEY")
+
+    # 确保API密钥已正确设置
+    if GOOGLE_API_KEY is None:
+        raise ValueError("GOOGLE_API_KEY 未设置，请在数据库'D:\\data\\database\\mm.db'中增加")
+
+    # 请求头设置
+    headers = {
+        'Content-Type': 'application/json'
+    }
+
+    # 请求体设置
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": query
+                    }
+                ]
+            }
+        ]
+    }
+
+    # 首先尝试使用主要模型
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{primary_model}:generateContent?key={GOOGLE_API_KEY}"
+        response = requests.post(url, headers=headers, data=json.dumps(payload))
+        response.raise_for_status()  # 检查请求是否成功
+        result = response.json()
+        
+        # 提取响应文本
+        if 'candidates' in result and result['candidates'] and 'content' in result['candidates'][0]:
+            text_parts = [part['text'] for part in result['candidates'][0]['content']['parts'] if 'text' in part]
+            return ''.join(text_parts)
+        return "无法解析响应内容"
+        
+    except Exception as e:
+        try:
+            # 如果第一个模型失败，尝试使用备用模型
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{fallback_model}:generateContent?key={GOOGLE_API_KEY}"
+            response = requests.post(url, headers=headers, data=json.dumps(payload))
+            response.raise_for_status()
+            result = response.json()
+            
+            # 提取响应文本
+            if 'candidates' in result and result['candidates'] and 'content' in result['candidates'][0]:
+                text_parts = [part['text'] for part in result['candidates'][0]['content']['parts'] if 'text' in part]
+                return ''.join(text_parts)
+            return "无法解析响应内容"
+            
+        except Exception as e:
+            # 如果两个模型都失败，返回错误信息
+            return f"生成内容时发生错误: {e}"
+
+# gemini生成图片并保存本地，参数分别为：提示文本，模型，保存目录，是否保存图片。
+# 默认模型：gemini-2.0-flash-exp-image-generation；默认保存目录：D:\data\image；默认保存图片：True
+def gemini_generate_image(prompt, model="gemini-2.0-flash-exp-image-generation", save_dir=r"D:\data\image", save_image=True):
+    """
+    生成AI图像并保存到指定目录
+    
+    参数:
+        prompt (str): 用于生成图像的提示文本
+        model (str): 使用的Gemini模型名称
+        save_dir (str): 图像保存目录
+        save_image (bool): 是否保存图像
+        
+    返回:
+        dict: 包含生成结果的字典
+    """
+    # 创建保存图片的目录
+    if save_image:
+        os.makedirs(save_dir, exist_ok=True)
+    
+    # 获取API密钥
+    api_key = check_account("password", "GOOGLE_API_KEY")
+    
+    # API 端点
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    
+    # 构建请求数据
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generation_config": {
+            "response_modalities": ["TEXT", "IMAGE"]
+        }
+    }
+    
+    # 发送请求
+    response = requests.post(
+        f"{url}?key={api_key}",
+        headers={"Content-Type": "application/json"},
+        data=json.dumps(payload)
+    )
+    
+    result = {
+        "success": False,
+        "message": "",
+        "image_path": None
+    }
+    
+    # 处理响应
+    if response.status_code == 200:
+        response_data = response.json()
+        result["success"] = True
+        
+        for part in response_data["candidates"][0]["content"]["parts"]:
+            if "text" in part:
+                result["message"] = part["text"]
+            elif "inlineData" in part:
+                # 处理图片数据
+                if save_image:
+                    image_data = base64.b64decode(part["inlineData"]["data"])
+                    image = Image.open(BytesIO(image_data))
+                    image_filename = f"gemini_image_{int(time.time())}.png"
+                    image_path = os.path.join(save_dir, image_filename)
+                    image.save(image_path)
+                    result["image_path"] = image_path
+    else:
+        result["success"] = False
+        result["message"] = f"错误: {response.status_code} - {response.text}"
+    
+    return result
 
 
 # 用gemini生成文章内容，参数分别为查询内容，主要模型名，备用模型名
@@ -304,6 +437,9 @@ def siliconflow_chat(prompt, model="Qwen/QwQ-32B"):
         return f"响应格式错误: {str(e)}, 响应内容: {response_json}"
     except Exception as e:
         return f"未知错误: {str(e)}"
+
+
+
 # 用ollama生成内容-向本地运行的 Ollama 服务发送请求。参数分别是：用户提问内容、模型名称、系统提示词、是否使用流式响应、是否过滤掉思考部分。
 def query_ollama(prompt, model="qwen3:4b", system="", stream=False, filter_think=True):
     """
