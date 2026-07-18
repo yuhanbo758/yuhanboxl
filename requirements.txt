@@ -1,2 +1,11 @@
 openai
 qcloud_cos
+requests
+numpy
+pandas
+dashscope
+google-generativeai
+Pillow
+html2text
+feedparser
+beautifulsoup4

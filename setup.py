@@ -12,10 +12,18 @@ setup(
     author_email='yuhanbo@sanrenjz.com',
     license='MIT',
     install_requires=[
+        # 以下依赖均由包源码直接导入；在此完整声明，确保 pip 安装后可以正常导入。
         'requests',
-        'numpy', 
-        'pandas', 
+        'numpy',
+        'pandas',
         'openai',
+        'qcloud_cos',
+        'dashscope',
+        'google-generativeai',
+        'Pillow',
+        'html2text',
+        'feedparser',
+        'beautifulsoup4',
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',  # 根据您的开发状态选择：Alpha/Beta/Stable

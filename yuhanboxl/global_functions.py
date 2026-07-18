@@ -35,8 +35,7 @@ def create_account_database(db_data_path):
         print(f"创建数据库时出错：{e}")
 
 # 读取mm.db，查询账号密码，参数分别为列名（指定为username，password），项目名称（mm）。
-def check_account(column_name, project_name):
-    db_path = r"D:\data\database\mm.db"
+def check_account(column_name, project_name, db_path=r"D:\data\database\mm.db"):
     try:
         # 如果数据库不存在，先创建数据库
         if not os.path.exists(db_path):
@@ -68,8 +67,7 @@ def check_account(column_name, project_name):
         return None
 
 # 向数据库添加账号密码，参数为项目名称，用户名，密码
-def add_account(project_name, username, password):
-    db_path = r"D:\data\database\mm.db"
+def add_account(project_name, username, password, db_path=r"D:\data\database\mm.db"):
     try:
         # 如果数据库不存在，先创建数据库
         if not os.path.exists(db_path):
@@ -192,6 +190,5 @@ def read_and_format_text_files(directory_path):
 
 if __name__ == "__main__":
     get_table(r"D:\data\database\article.db", "RSS订阅")
-
 
 
